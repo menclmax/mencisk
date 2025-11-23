@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { rooms, persistRooms, ensureReadyPlayersSet } from '@/lib/roomStorage'
+import { getRoom, updateRoom, updatePlayer, removePlayer, cleanupInactivePlayers } from '@/lib/supabaseStorage'
+import { WORDS } from '@/lib/words'
 
 export async function GET(
   request: NextRequest,
@@ -8,34 +9,30 @@ export async function GET(
   try {
     const normalizedRoomCode = params.roomCode.toUpperCase().trim()
     console.log(`GET request for room: ${normalizedRoomCode}`)
-    console.log(`Current rooms:`, Array.from(rooms.keys()))
-    console.log(`Total rooms: ${rooms.size}`)
     
-    const room = rooms.get(normalizedRoomCode)
+    const room = await getRoom(normalizedRoomCode)
 
     if (!room) {
-      console.log(`Room ${normalizedRoomCode} not found. Available rooms:`, Array.from(rooms.keys()))
+      console.log(`Room ${normalizedRoomCode} not found`)
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
     
     console.log(`Room found: ${normalizedRoomCode}`)
 
-    // Remove inactive players (not active for 30 seconds) before returning
-    const now = Date.now()
-    const beforeCount = room.players.length
-    room.players = room.players.filter(p => now - p.lastActive < 30000)
-    const afterCount = room.players.length
+    // Clean up inactive players (not active for 30 seconds)
+    await cleanupInactivePlayers(normalizedRoomCode, 30000)
     
-    if (beforeCount !== afterCount) {
-      console.log(`Removed ${beforeCount - afterCount} inactive players from room ${normalizedRoomCode}`)
-      persistRooms()
+    // Refresh room data after cleanup
+    const refreshedRoom = await getRoom(normalizedRoomCode)
+    if (!refreshedRoom) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
 
     // Always return target word for multiplayer (players need it to play)
     // Only hide it in the UI until game ends
     return NextResponse.json({
-      gameState: room.gameState,
-      players: room.players.map(p => ({
+      gameState: refreshedRoom.gameState,
+      players: refreshedRoom.players.map((p: any) => ({
         id: p.id,
         nickname: p.nickname,
         guesses: p.guesses,
@@ -43,10 +40,11 @@ export async function GET(
         status: p.status,
         currentGuess: p.currentGuess || '' // Include current guess for ghost display
       })),
-      readyPlayers: Array.from(ensureReadyPlayersSet(room)),
-      targetWord: room.targetWord // Always return for multiplayer games
+      readyPlayers: Array.isArray(refreshedRoom.readyPlayers) ? refreshedRoom.readyPlayers : [],
+      targetWord: refreshedRoom.targetWord // Always return for multiplayer games
     })
   } catch (error) {
+    console.error('Error getting room:', error)
     return NextResponse.json({ error: 'Failed to get room state' }, { status: 500 })
   }
 }
@@ -58,28 +56,30 @@ export async function POST(
   try {
     const { playerId, guess, gameState, readyForNewGame, leaving, currentGuess } = await request.json()
     const normalizedRoomCode = params.roomCode.toUpperCase().trim()
-    const room = rooms.get(normalizedRoomCode)
-
+    
+    let room = await getRoom(normalizedRoomCode)
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
 
     // If player is leaving, remove them immediately
     if (leaving && playerId) {
-      const beforeCount = room.players.length
-      room.players = room.players.filter(p => p.id !== playerId)
-      const readyPlayersSet = ensureReadyPlayersSet(room)
-      readyPlayersSet.delete(playerId)
-      room.readyPlayers = readyPlayersSet
+      await removePlayer(normalizedRoomCode, playerId)
       
-      if (room.players.length !== beforeCount) {
-        console.log(`Player ${playerId} left room ${normalizedRoomCode}`)
-        persistRooms()
+      // Update ready players list
+      const readyPlayers = Array.isArray(room.readyPlayers) ? room.readyPlayers : []
+      const updatedReadyPlayers = readyPlayers.filter((id: string) => id !== playerId)
+      await updateRoom(normalizedRoomCode, { readyPlayers: updatedReadyPlayers })
+      
+      // Refresh room data
+      room = await getRoom(normalizedRoomCode)
+      if (!room) {
+        return NextResponse.json({ error: 'Room not found' }, { status: 404 })
       }
       
       return NextResponse.json({ 
         success: true,
-        players: room.players.map(p => ({
+        players: room.players.map((p: any) => ({
           id: p.id,
           nickname: p.nickname,
           guesses: p.guesses,
@@ -90,88 +90,118 @@ export async function POST(
       })
     }
 
-    // Initialize readyPlayers if it doesn't exist
-    const readyPlayersSet = ensureReadyPlayersSet(room)
+    // Get current player
+    const player = room.players.find((p: any) => p.id === playerId)
+    if (!player && playerId) {
+      console.warn(`Player ${playerId} not found in room ${normalizedRoomCode}`)
+    }
 
-    // Update player's last active time (heartbeat or game update)
-    const player = room.players.find(p => p.id === playerId)
+    // Update player's last active time and other fields
     if (player) {
-      player.lastActive = Date.now()
+      const playerUpdates: any = {}
+      
       // Update current guess (for ghost display)
       if (currentGuess !== undefined) {
-        player.currentGuess = currentGuess
+        playerUpdates.currentGuess = currentGuess
       }
+      
       // Update player's guess count and status if game state provided
       if (gameState) {
         const previousStatus = player.status
-        player.guesses = gameState.guesses.length
-        player.status = gameState.gameStatus
+        playerUpdates.guesses = gameState.guesses.length
+        playerUpdates.status = gameState.gameStatus
+        
         // Clear current guess when submitting a guess
         if (gameState.guesses.length > 0) {
-          player.currentGuess = ''
+          playerUpdates.currentGuess = ''
         }
+        
         // Increment wordsGuessed when game ends (won or lost) - only once per game
         if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && previousStatus === 'playing') {
-          player.wordsGuessed = (player.wordsGuessed || 0) + 1
+          playerUpdates.wordsGuessed = (player.wordsGuessed || 0) + 1
         }
       }
-    } else if (playerId) {
-      // Player not found but trying to update - might be a reconnection
-      // This shouldn't happen, but handle gracefully
-      console.warn(`Player ${playerId} not found in room ${params.roomCode}`)
+      
+      await updatePlayer(normalizedRoomCode, playerId, playerUpdates)
     }
 
     // Handle ready for new game
+    let readyPlayers = Array.isArray(room.readyPlayers) ? [...room.readyPlayers] : []
     if (readyForNewGame !== undefined) {
       if (readyForNewGame) {
-        readyPlayersSet.add(playerId)
+        if (!readyPlayers.includes(playerId)) {
+          readyPlayers.push(playerId)
+        }
       } else {
-        readyPlayersSet.delete(playerId)
+        readyPlayers = readyPlayers.filter((id: string) => id !== playerId)
       }
-      room.readyPlayers = readyPlayersSet
-      persistRooms()
+      await updateRoom(normalizedRoomCode, { readyPlayers })
     }
 
     // Check if all players are ready for new game
     const allPlayersReady = room.players.length > 0 && 
-      room.players.every(p => readyPlayersSet.has(p.id)) &&
+      room.players.every((p: any) => readyPlayers.includes(p.id)) &&
       room.gameState.gameStatus !== 'playing'
 
     // If all players ready, start new game
     if (allPlayersReady && room.gameState.gameStatus !== 'playing') {
-      const { WORDS } = await import('@/lib/words')
-      room.targetWord = WORDS[Math.floor(Math.random() * WORDS.length)]
-      room.gameState = {
+      const newTargetWord = WORDS[Math.floor(Math.random() * WORDS.length)]
+      const newGameState = {
         guesses: [],
         gameStatus: 'playing' as const,
         letterStates: {}
       }
-      room.readyPlayers.clear()
-      // Reset all players (keep wordsGuessed, only reset guesses and status)
-      room.players.forEach(p => {
-        p.guesses = 0
-        p.status = 'playing'
-        p.lastActive = Date.now()
-        // wordsGuessed persists across games
+      
+      await updateRoom(normalizedRoomCode, {
+        targetWord: newTargetWord,
+        gameState: newGameState,
+        readyPlayers: []
       })
+      
+      // Reset all players (keep wordsGuessed, only reset guesses and status)
+      for (const p of room.players) {
+        await updatePlayer(normalizedRoomCode, p.id, {
+          guesses: 0,
+          status: 'playing'
+        })
+      }
+      
+      // Refresh room
+      room = await getRoom(normalizedRoomCode)
+      if (room) {
+        room.targetWord = newTargetWord
+        room.gameState = newGameState
+        readyPlayers = []
+      }
     }
 
     // Update game state
     if (gameState) {
-      room.gameState = gameState
+      const roomUpdates: any = { gameState }
       // Clear ready players if game is still playing
       if (gameState.gameStatus === 'playing') {
-        const readySet = ensureReadyPlayersSet(room)
-        readySet.clear()
-        room.readyPlayers = readySet
+        roomUpdates.readyPlayers = []
+        readyPlayers = []
       }
-      persistRooms()
+      await updateRoom(normalizedRoomCode, roomUpdates)
+      
+      // Refresh room
+      room = await getRoom(normalizedRoomCode)
+      if (room && gameState.gameStatus === 'playing') {
+        readyPlayers = []
+      }
+    }
+
+    // Refresh room data before returning
+    const finalRoom = await getRoom(normalizedRoomCode)
+    if (!finalRoom) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
 
     return NextResponse.json({ 
       success: true, 
-      gameState: room.gameState,
-      players: room.players.map(p => ({
+      gameState: finalRoom.gameState,
+      players: finalRoom.players.map((p: any) => ({
         id: p.id,
         nickname: p.nickname,
         guesses: p.guesses,
@@ -179,11 +209,12 @@ export async function POST(
         status: p.status,
         currentGuess: p.currentGuess || '' // Include current guess for ghost display
       })),
-      readyPlayers: Array.from(room.readyPlayers),
+      readyPlayers: Array.isArray(finalRoom.readyPlayers) ? finalRoom.readyPlayers : [],
       allPlayersReady,
-      targetWord: allPlayersReady ? room.targetWord : undefined
+      targetWord: allPlayersReady ? finalRoom.targetWord : undefined
     })
   } catch (error) {
+    console.error('Error updating room:', error)
     return NextResponse.json({ error: 'Failed to update room' }, { status: 500 })
   }
 }

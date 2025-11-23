@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { rooms, Player, persistRooms } from '@/lib/roomStorage'
+import { getRoom, addPlayerToRoom } from '@/lib/supabaseStorage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,22 +12,20 @@ export async function POST(request: NextRequest) {
     // Normalize room code to uppercase
     const normalizedRoomCode = roomCode.toUpperCase().trim()
     console.log(`Join attempt for room: ${normalizedRoomCode}`)
-    console.log(`Current rooms in storage:`, Array.from(rooms.keys()))
-    console.log(`Total rooms: ${rooms.size}`)
     
-    const room = rooms.get(normalizedRoomCode)
+    const room = await getRoom(normalizedRoomCode)
 
     if (!room) {
-      console.log(`Join attempt: Room ${normalizedRoomCode} not found. Available rooms:`, Array.from(rooms.keys()))
+      console.log(`Join attempt: Room ${normalizedRoomCode} not found`)
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
     
     console.log(`Room found: ${normalizedRoomCode}, players: ${room.players.length}`)
 
     // Add player if not already in room
-    const existingPlayer = room.players.find(p => p.id === playerId)
+    const existingPlayer = room.players.find((p: any) => p.id === playerId)
     if (!existingPlayer) {
-      room.players.push({
+      await addPlayerToRoom(normalizedRoomCode, {
         id: playerId,
         nickname: nickname.trim(),
         guesses: 0,
@@ -35,27 +33,40 @@ export async function POST(request: NextRequest) {
         status: 'playing',
         lastActive: Date.now()
       })
+      
+      // Refresh room data
+      const updatedRoom = await getRoom(normalizedRoomCode)
+      if (updatedRoom) {
+        room.players = updatedRoom.players
+      }
     } else {
       // Update last active time
-      existingPlayer.lastActive = Date.now()
+      await addPlayerToRoom(normalizedRoomCode, {
+        id: playerId,
+        nickname: existingPlayer.nickname,
+        guesses: existingPlayer.guesses,
+        wordsGuessed: existingPlayer.wordsGuessed,
+        status: existingPlayer.status,
+        lastActive: Date.now(),
+        currentGuess: existingPlayer.currentGuess
+      })
     }
-    
-    persistRooms() // Save to file
 
     return NextResponse.json({ 
       success: true, 
       gameState: room.gameState,
       targetWord: room.targetWord, // All players need the target word to play (always return it for multiplayer)
-      players: room.players.map(p => ({
+      players: room.players.map((p: any) => ({
         id: p.id,
         nickname: p.nickname,
         guesses: p.guesses,
         wordsGuessed: p.wordsGuessed || 0,
         status: p.status
       })),
-      readyPlayers: Array.from((room.readyPlayers instanceof Set ? room.readyPlayers : new Set(room.readyPlayers || [])))
+      readyPlayers: Array.isArray(room.readyPlayers) ? room.readyPlayers : []
     })
   } catch (error) {
+    console.error('Error joining room:', error)
     return NextResponse.json({ error: 'Failed to join room' }, { status: 500 })
   }
 }

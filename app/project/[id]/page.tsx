@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { projects, Project } from '@/components/Launchpad'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
 import { WORDS } from '@/lib/words'
+import { supabaseClient } from '@/lib/supabaseClient'
 import styles from './page.module.css'
 
 type LetterState = 'correct' | 'present' | 'absent' | ''
@@ -58,6 +59,7 @@ export default function ProjectPage() {
   const [playerId] = useState<string>(() => `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
   const [isHost, setIsHost] = useState(false)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const subscriptionRef = useRef<any>(null)
   const [nickname, setNickname] = useState<string>('')
   const [players, setPlayers] = useState<Array<{ id: string; nickname: string; guesses: number; wordsGuessed: number; status: string; currentGuess?: string }>>([])
   const [readyPlayers, setReadyPlayers] = useState<string[]>([])
@@ -508,47 +510,122 @@ export default function ProjectPage() {
     }
   }, [roomCode, multiplayerState, playerId, currentGuess])
 
+  const updateGameState = (data: any) => {
+    if (data.gameState) {
+      setGuesses(data.gameState.guesses || [])
+      setGameStatus(data.gameState.gameStatus || 'playing')
+      setLetterStates(data.gameState.letterStates || {})
+    }
+    // Update players list for leaderboard
+    if (data.players && Array.isArray(data.players)) {
+      setPlayers(data.players)
+    }
+    // Update ready players
+    if (data.readyPlayers && Array.isArray(data.readyPlayers)) {
+      setReadyPlayers(data.readyPlayers)
+    }
+    // Update target word if game is finished or new game started
+    if (data.targetWord) {
+      setTargetWord(data.targetWord)
+      // If new game started, reset local state
+      if (data.allPlayersReady && data.gameState?.gameStatus === 'playing') {
+        setCurrentGuess('')
+        setGuesses([])
+        setGameStatus('playing')
+        setLetterStates({})
+        setErrorMessage('')
+        setIsReadyForNewGame(false)
+      }
+    }
+  }
+
   const startPolling = (code: string) => {
-    // Clear any existing polling interval
+    // Clear any existing polling interval or subscription
     if (pollingInterval) {
       clearInterval(pollingInterval)
+      setPollingInterval(null)
     }
-    
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/rooms/${code}`)
-        const data = await response.json()
-        if (response.ok && data.gameState) {
-          setGuesses(data.gameState.guesses || [])
-          setGameStatus(data.gameState.gameStatus || 'playing')
-          setLetterStates(data.gameState.letterStates || {})
-          // Update players list for leaderboard
-          if (data.players && Array.isArray(data.players)) {
-            setPlayers(data.players)
-          }
-          // Update ready players
-          if (data.readyPlayers && Array.isArray(data.readyPlayers)) {
-            setReadyPlayers(data.readyPlayers)
-          }
-          // Update target word if game is finished or new game started
-          if (data.targetWord) {
-            setTargetWord(data.targetWord)
-            // If new game started, reset local state
-            if (data.allPlayersReady && data.gameState.gameStatus === 'playing') {
-              setCurrentGuess('')
-              setGuesses([])
-              setGameStatus('playing')
-              setLetterStates({})
-              setErrorMessage('')
-              setIsReadyForNewGame(false)
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe()
+      subscriptionRef.current = null
+    }
+
+    // Try to use Supabase real-time if configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (supabaseUrl) {
+      // Set up real-time subscription for room changes
+      const roomSubscription = supabaseClient
+        .channel(`room:${code}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'rooms',
+            filter: `id=eq.${code}`
+          },
+          async () => {
+            // Room changed, fetch updated state
+            try {
+              const response = await fetch(`/api/rooms/${code}`)
+              const data = await response.json()
+              if (response.ok) {
+                updateGameState(data)
+              }
+            } catch (error) {
+              console.error('Failed to fetch room state:', error)
             }
           }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${code}`
+          },
+          async () => {
+            // Players changed, fetch updated state
+            try {
+              const response = await fetch(`/api/rooms/${code}`)
+              const data = await response.json()
+              if (response.ok) {
+                updateGameState(data)
+              }
+            } catch (error) {
+              console.error('Failed to fetch room state:', error)
+            }
+          }
+        )
+        .subscribe()
+
+      subscriptionRef.current = roomSubscription
+
+      // Also do an initial fetch
+      fetch(`/api/rooms/${code}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.gameState) {
+            updateGameState(data)
+          }
+        })
+        .catch(err => console.error('Initial fetch failed:', err))
+    } else {
+      // Fallback to polling if Supabase not configured
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/rooms/${code}`)
+          const data = await response.json()
+          if (response.ok) {
+            updateGameState(data)
+          }
+        } catch (error) {
+          console.error('Failed to poll room state:', error)
         }
-      } catch (error) {
-        console.error('Failed to poll room state:', error)
-      }
-    }, 1000) // Poll every second
-    setPollingInterval(interval)
+      }, 1000) // Poll every second
+      setPollingInterval(interval)
+    }
   }
 
   const handleNewGameMultiplayer = async () => {
@@ -586,11 +663,15 @@ export default function ProjectPage() {
     }
   }, [isSinglePlayerMode, multiplayerState, roomCode, players.length, targetWord, gameStatus])
 
-  // Cleanup polling on unmount and notify server if leaving multiplayer room
+  // Cleanup polling/subscription on unmount and notify server if leaving multiplayer room
   useEffect(() => {
     return () => {
       if (pollingInterval) {
         clearInterval(pollingInterval)
+      }
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+        subscriptionRef.current = null
       }
       // Notify server when component unmounts (user navigates away)
       if (roomCode && multiplayerState === 'playing' && playerId) {

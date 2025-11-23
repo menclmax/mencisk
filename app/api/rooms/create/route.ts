@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { WORDS } from '@/lib/words'
-import { rooms, Room, persistRooms } from '@/lib/roomStorage'
+import { supabase } from '@/lib/supabase'
+import { createRoom } from '@/lib/supabaseStorage'
 
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -21,15 +22,28 @@ export async function POST(request: NextRequest) {
 
     // Generate unique room code
     let roomCode = generateRoomCode()
-    while (rooms.has(roomCode)) {
+    let attempts = 0
+    while (attempts < 10) {
+      const { data: existing } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('id', roomCode)
+        .single()
+      
+      if (!existing) break
       roomCode = generateRoomCode()
+      attempts++
+    }
+
+    if (attempts >= 10) {
+      return NextResponse.json({ error: 'Failed to generate unique room code' }, { status: 500 })
     }
 
     // Select random word
     const targetWord = WORDS[Math.floor(Math.random() * WORDS.length)]
 
-    // Create room
-    const room: Room = {
+    // Create room object
+    const room = {
       id: roomCode,
       hostId: playerId,
       players: [{
@@ -37,7 +51,7 @@ export async function POST(request: NextRequest) {
         nickname: nickname.trim(),
         guesses: 0,
         wordsGuessed: 0,
-        status: 'playing',
+        status: 'playing' as const,
         lastActive: Date.now()
       }],
       targetWord,
@@ -46,29 +60,21 @@ export async function POST(request: NextRequest) {
         gameStatus: 'playing' as const,
         letterStates: {}
       },
-      readyPlayers: new Set<string>(),
+      readyPlayers: [] as string[],
       createdAt: Date.now()
     }
 
-    rooms.set(roomCode, room)
-    persistRooms() // Save to file
-    console.log(`Room created: ${roomCode}. Total rooms: ${rooms.size}`)
-    console.log(`Room details:`, {
-      id: room.id,
-      players: room.players.length,
-      createdAt: new Date(room.createdAt).toISOString()
-    })
-    
-    // Verify room was actually stored
-    const verifyRoom = rooms.get(roomCode)
-    if (!verifyRoom) {
-      console.error(`ERROR: Room ${roomCode} was not stored!`)
-    } else {
-      console.log(`Verified: Room ${roomCode} exists in storage`)
+    // Save to Supabase
+    const success = await createRoom(room)
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to create room' }, { status: 500 })
     }
+
+    console.log(`Room created: ${roomCode}`)
 
     return NextResponse.json({ roomCode, targetWord: room.targetWord })
   } catch (error) {
+    console.error('Error creating room:', error)
     return NextResponse.json({ error: 'Failed to create room' }, { status: 500 })
   }
 }

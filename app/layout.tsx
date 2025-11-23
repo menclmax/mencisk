@@ -3,7 +3,7 @@ import './globals.css'
 import CustomCursor from '@/components/CustomCursor'
 
 export const metadata: Metadata = {
-  title: 'MencLAB - Retro Portfolio Launchpad',
+  title: 'MencLAB',
   description: 'A retro synthwave portfolio of web apps and projects',
 }
 
