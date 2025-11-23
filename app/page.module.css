@@ -4,6 +4,9 @@
   position: relative;
   z-index: 1;
   isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gridPattern {
@@ -20,6 +23,7 @@
 .container {
   position: relative;
   max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
 }
 

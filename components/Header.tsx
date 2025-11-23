@@ -9,9 +9,6 @@ export default function Header() {
         <h1 className={styles.title}>
           MencLAB
         </h1>
-        <div className={styles.subtitle}>
-          PORTFOLIO LAUNCHPAD
-        </div>
       </div>
       <div className={styles.decorativeLine}></div>
     </header>
