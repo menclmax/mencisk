@@ -34,7 +34,7 @@ export const projects: Project[] = [
     description: 'An innovative digital experience',
     url: '#',
     category: 'Project',
-    status: 'active',
+    status: 'coming-soon',
     icon: 'https://via.placeholder.com/120x120/5b9bd5/0a1628?text=PROJECT+TWO',
     lastUpdate: '2024-01-10'
   },
@@ -47,36 +47,6 @@ export const projects: Project[] = [
     status: 'coming-soon',
     icon: 'https://via.placeholder.com/120x120/5b9bd5/0a1628?text=APP+THREE',
     lastUpdate: '2024-01-05'
-  },
-  {
-    id: '4',
-    name: 'PROJECT FOUR',
-    description: 'Another amazing creation',
-    url: '#',
-    category: 'Project',
-    status: 'active',
-    icon: 'https://via.placeholder.com/120x120/5b9bd5/0a1628?text=PROJECT+FOUR',
-    lastUpdate: '2024-01-12'
-  },
-  {
-    id: '5',
-    name: 'APP FIVE',
-    description: 'Work in progress',
-    url: '#',
-    category: 'Web App',
-    status: 'coming-soon',
-    icon: 'https://via.placeholder.com/120x120/5b9bd5/0a1628?text=APP+FIVE',
-    lastUpdate: '2024-01-08'
-  },
-  {
-    id: '6',
-    name: 'PROJECT SIX',
-    description: 'Experimental project',
-    url: '#',
-    category: 'Project',
-    status: 'active',
-    icon: 'https://via.placeholder.com/120x120/5b9bd5/0a1628?text=PROJECT+SIX',
-    lastUpdate: '2024-01-20'
   }
 ]
 

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Launchpad from '@/components/Launchpad'
 import Header from '@/components/Header'
 import LockScreen from '@/components/LockScreen'
+import BackgroundMusic from '@/components/BackgroundMusic'
+import MuteButton from '@/components/MuteButton'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
 import styles from './page.module.css'
 
@@ -53,6 +55,8 @@ export default function Home() {
         <Header />
         <Launchpad />
       </div>
+      <BackgroundMusic />
+      <MuteButton />
     </main>
   )
 }

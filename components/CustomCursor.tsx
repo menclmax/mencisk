@@ -7,6 +7,7 @@ export default function CustomCursor() {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isHovering, setIsHovering] = useState(false)
   const [isClicking, setIsClicking] = useState(false)
+  const [isHoveringRoomCode, setIsHoveringRoomCode] = useState(false)
   const [velocity, setVelocity] = useState(0)
   const prevPositionRef = useRef({ x: 0, y: 0, time: Date.now() })
 
@@ -50,6 +51,10 @@ export default function CustomCursor() {
         target.closest('[role="button"]') ||
         target.closest('[class*="card"]') ||
         target.closest('[class*="button"]')
+      
+      // Check if hovering over room code
+      const isRoomCode = target.closest('[class*="roomCodeDisplay"]') !== null
+      setIsHoveringRoomCode(isRoomCode)
       
       setIsHovering(!!isInteractive)
     }
@@ -95,7 +100,7 @@ export default function CustomCursor() {
 
   return (
     <div
-      className={`${styles.cursor} ${isHovering ? styles.hover : ''} ${isClicking ? styles.clicking : ''}`}
+      className={`${styles.cursor} ${isHovering ? styles.hover : ''} ${isClicking ? styles.clicking : ''} ${isHoveringRoomCode ? styles.roomCodeHover : ''}`}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,

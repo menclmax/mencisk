@@ -20,6 +20,29 @@ const getDailyWord = (): string => {
   return WORDS[dayOfYear % WORDS.length]
 }
 
+// Play sound effect
+const playSound = (frequency: number, duration: number = 0.1, type: 'sine' | 'square' | 'sawtooth' = 'sine') => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    oscillator.frequency.value = frequency
+    oscillator.type = type
+
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + duration)
+  } catch (error) {
+    // Silently fail if Web Audio API is not supported
+  }
+}
+
 export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
@@ -259,10 +282,12 @@ export default function ProjectPage() {
   const project = projects.find((p: Project) => p.id === projectId)
 
   const handleSinglePlayerClick = () => {
+    playSound(440, 0.15, 'square') // Click sound
     setIsSinglePlayerMode(true)
   }
 
   const handleMultiplayerClick = () => {
+    playSound(440, 0.15, 'square') // Click sound
     setIsAnimating(true)
     setTimeout(() => {
       setIsMultiplayerMode(true)
@@ -313,6 +338,7 @@ export default function ProjectPage() {
   }
 
   const handleHostGame = () => {
+    playSound(440, 0.15, 'square') // Click sound
     setMultiplayerState('hosting')
   }
 
@@ -370,6 +396,7 @@ export default function ProjectPage() {
   }
 
   const handleJoinGame = () => {
+    playSound(440, 0.15, 'square') // Click sound
     setMultiplayerState('joining')
   }
 
@@ -599,7 +626,14 @@ export default function ProjectPage() {
         <header className={styles.projectHeader}>
           <div className={styles.headerContent}>
             <div className={styles.headerTop}>
-              <button onClick={() => router.push('/')} className={styles.backButtonTop}>
+              <button 
+                onClick={() => {
+                  playSound(440, 0.15, 'square')
+                  router.push('/')
+                }} 
+                className={styles.backButtonTop}
+                onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
+              >
                 ← BACK TO LAUNCHPAD
               </button>
               <div className={styles.titleContainer}>
@@ -654,12 +688,14 @@ export default function ProjectPage() {
                         <button 
                           className={styles.roomButton}
                           onClick={handleSinglePlayerClick}
+                          onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                         >
                           SINGLE PLAYER
                         </button>
                         <button 
                           className={styles.roomButton}
                           onClick={handleMultiplayerClick}
+                          onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                         >
                           MULTIPLAYER
                         </button>
@@ -671,18 +707,21 @@ export default function ProjectPage() {
                             <button 
                               className={`${styles.roomButton} ${styles.animateIn}`}
                               onClick={handleHostGame}
+                              onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                             >
                               HOST GAME
                             </button>
                             <button 
                               className={`${styles.roomButton} ${styles.animateIn}`}
                               onClick={handleJoinGame}
+                              onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                             >
                               JOIN GAME
                             </button>
                             <button 
                               className={`${styles.backButtonSmall} ${styles.animateIn}`}
                               onClick={handleBackClick}
+                              onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                             >
                               ← BACK
                             </button>
@@ -695,7 +734,14 @@ export default function ProjectPage() {
                                 className={styles.nicknameInput}
                                 placeholder="ENTER YOUR NICKNAME"
                                 maxLength={20}
-                                onChange={(e) => setNickname(e.target.value)}
+                                onChange={(e) => {
+                                  const newValue = e.target.value
+                                  // Play sound when typing (only if value increased)
+                                  if (newValue.length > nickname.length) {
+                                    playSound(440, 0.05, 'sine') // Short typing sound
+                                  }
+                                  setNickname(newValue)
+                                }}
                                 value={nickname}
                                 autoFocus
                                 onKeyDown={(e) => {
@@ -707,6 +753,7 @@ export default function ProjectPage() {
                               <button 
                                 className={styles.roomButton}
                                 onClick={handleCreateRoom}
+                                onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                                 disabled={!nickname.trim()}
                               >
                                 CREATE ROOM
@@ -714,9 +761,11 @@ export default function ProjectPage() {
                               <button 
                                 className={styles.backButtonSmall}
                                 onClick={() => {
+                                  playSound(440, 0.15, 'square')
                                   setMultiplayerState('host-join')
                                   setNickname('')
                                 }}
+                                onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                               >
                                 ← BACK
                               </button>
@@ -730,7 +779,14 @@ export default function ProjectPage() {
                                 className={styles.nicknameInput}
                                 placeholder="ENTER YOUR NICKNAME"
                                 maxLength={20}
-                                onChange={(e) => setNickname(e.target.value)}
+                                onChange={(e) => {
+                                  const newValue = e.target.value
+                                  // Play sound when typing (only if value increased)
+                                  if (newValue.length > nickname.length) {
+                                    playSound(440, 0.05, 'sine') // Short typing sound
+                                  }
+                                  setNickname(newValue)
+                                }}
                                 value={nickname}
                                 autoFocus
                               />
@@ -750,6 +806,7 @@ export default function ProjectPage() {
                               <button 
                                 className={styles.roomButton}
                                 onClick={() => handleJoinRoom(roomCode)}
+                                onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                                 disabled={roomCode.length !== 6 || !nickname.trim()}
                               >
                                 JOIN
@@ -757,10 +814,12 @@ export default function ProjectPage() {
                               <button 
                                 className={styles.backButtonSmall}
                                 onClick={() => {
+                                  playSound(440, 0.15, 'square')
                                   setMultiplayerState('host-join')
                                   setRoomCode('')
                                   setNickname('')
                                 }}
+                                onMouseEnter={() => playSound(523.25, 0.08, 'sine')}
                               >
                                 ← BACK
                               </button>
@@ -805,7 +864,31 @@ export default function ProjectPage() {
                 {roomCode && multiplayerState === 'playing' ? (
                   <>
                     <div className={styles.leaderboardContainer}>
-                      <div className={styles.roomCodeDisplay}>
+                      <div 
+                        className={styles.roomCodeDisplay}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(roomCode)
+                            playSound(523.25, 0.1, 'sine') // Success sound
+                            // Show brief feedback
+                            const originalText = document.querySelector(`.${styles.roomCodeDisplay}`)?.textContent
+                            const display = document.querySelector(`.${styles.roomCodeDisplay}`) as HTMLElement
+                            if (display) {
+                              display.textContent = 'COPIED!'
+                              setTimeout(() => {
+                                if (display) {
+                                  display.textContent = originalText || `ROOM: ${roomCode} ${isHost ? '(HOST)' : ''}`
+                                }
+                              }, 1000)
+                            }
+                          } catch (err) {
+                            console.error('Failed to copy:', err)
+                            playSound(200, 0.1, 'square') // Error sound
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to copy room code"
+                      >
                         ROOM: {roomCode} {isHost ? '(HOST)' : ''}
                       </div>
                       <div className={styles.leaderboard}>

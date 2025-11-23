@@ -483,6 +483,15 @@
   border: 2px solid #000000;
   text-transform: uppercase;
   letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.roomCodeDisplay:hover {
+  background: #e0e0e0;
+  border-color: #333333;
+  transform: scale(1.02);
 }
 
 .leaderboard {
