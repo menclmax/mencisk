@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  font-family: 'Press Start 2P', monospace;
+}
+
+:root {
+  --bg-dark: #0a1628;
+  --bg-darker: #050a14;
+  --text-primary: #e0e8ff;
+  --text-secondary: #6b7fa8;
+  --border-color: #4a6fa5;
+  --accent: #5b9bd5;
+  --accent-hover: #7ab8e6;
+}
+
+body {
+  font-family: 'Press Start 2P', monospace;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 8px;
+  line-height: 1.6;
+  position: relative;
+  cursor: none; /* Custom cursor will be used */
+}
+
+/* Hide default cursor on all interactive elements */
+input,
+textarea,
+select,
+button,
+a,
+[role="button"],
+[onclick] {
+  cursor: none !important;
+}
+
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* Button styles */
+.retro-button {
+  font-family: 'Press Start 2P', monospace;
+  padding: 10px 20px;
+  background: var(--bg-darker);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 8px;
+  transition: all 0.1s ease;
+  image-rendering: pixelated;
+}
+
+.retro-button:hover {
+  background: var(--text-primary);
+  color: var(--bg-dark);
+}
+
+.retro-button:active {
+  transform: scale(0.98);
+}
+
+.retro-button.active {
+  background: var(--text-primary);
+  color: var(--bg-dark);
+}
+

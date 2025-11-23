@@ -1,0 +1,218 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.gridPattern {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  color: rgba(91, 155, 213, 0.25);
+}
+
+.container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.lockContainer {
+  text-align: center;
+  padding: 40px;
+  background: rgba(5, 10, 20, 0.8);
+  border: 3px solid var(--border-color);
+  box-shadow: 
+    0 0 20px rgba(91, 155, 213, 0.3),
+    inset 0 0 20px rgba(91, 155, 213, 0.1);
+}
+
+.title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 36px;
+  margin-bottom: 20px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  text-shadow: 
+    0 0 5px var(--accent),
+    0 0 10px var(--accent),
+    0 0 15px var(--accent),
+    0 0 20px var(--accent);
+}
+
+.subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+  margin-bottom: 40px;
+  color: var(--text-primary);
+  text-shadow: 
+    0 0 3px var(--accent),
+    0 0 6px var(--accent);
+}
+
+.inputContainer {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.digitInput {
+  width: 100px;
+  height: 100px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 40px;
+  text-align: center;
+  background: var(--bg-darker);
+  border: 3px solid var(--border-color);
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 0 10px rgba(91, 155, 213, 0.2),
+    inset 0 0 10px rgba(91, 155, 213, 0.1);
+}
+
+.digitInput:focus {
+  border-color: var(--accent);
+  box-shadow: 
+    0 0 20px rgba(91, 155, 213, 0.5),
+    inset 0 0 15px rgba(91, 155, 213, 0.2);
+  transform: scale(1.05);
+}
+
+.digitInput.error {
+  border-color: #ff4444;
+  box-shadow: 
+    0 0 20px rgba(255, 68, 68, 0.5),
+    inset 0 0 15px rgba(255, 68, 68, 0.2);
+  animation: shake 0.5s;
+}
+
+.digitInput.success {
+  border-color: #44ff44;
+  box-shadow: 
+    0 0 30px rgba(68, 255, 68, 0.8),
+    0 0 50px rgba(68, 255, 68, 0.5),
+    inset 0 0 20px rgba(68, 255, 68, 0.3);
+  animation: successPulse 1.5s ease-in-out;
+  background: rgba(68, 255, 68, 0.1);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 
+      0 0 10px rgba(68, 255, 68, 0.2),
+      inset 0 0 10px rgba(68, 255, 68, 0.1);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 
+      0 0 40px rgba(68, 255, 68, 1),
+      0 0 60px rgba(68, 255, 68, 0.7),
+      inset 0 0 25px rgba(68, 255, 68, 0.4);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 
+      0 0 30px rgba(68, 255, 68, 0.8),
+      0 0 50px rgba(68, 255, 68, 0.5),
+      inset 0 0 20px rgba(68, 255, 68, 0.3);
+  }
+}
+
+.errorMessage {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #ff4444;
+  text-shadow: 
+    0 0 5px #ff4444,
+    0 0 10px #ff4444;
+  animation: blink 0.5s infinite;
+}
+
+.successMessage {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #44ff44;
+  text-shadow: 
+    0 0 10px #44ff44,
+    0 0 20px #44ff44,
+    0 0 30px #44ff44;
+  animation: successGlow 1.5s ease-in-out;
+  margin-top: 10px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes successGlow {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+    text-shadow: 
+      0 0 5px #44ff44,
+      0 0 10px #44ff44;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+    text-shadow: 
+      0 0 15px #44ff44,
+      0 0 30px #44ff44,
+      0 0 45px #44ff44;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 
+      0 0 10px #44ff44,
+      0 0 20px #44ff44,
+      0 0 30px #44ff44;
+  }
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 24px;
+  }
+  
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+
+  .digitInput {
+    width: 70px;
+    height: 70px;
+    font-size: 28px;
+  }
+
+  .inputContainer {
+    gap: 15px;
+  }
+}
+

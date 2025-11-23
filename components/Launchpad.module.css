@@ -1,0 +1,81 @@
+.launchpad {
+  position: relative;
+  z-index: 2;
+}
+
+.searchContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.searchBar {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 12px 20px;
+  background: var(--bg-darker);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  width: 100%;
+  max-width: 600px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.1s ease;
+  text-shadow: 
+    0 0 3px var(--accent),
+    0 0 6px var(--accent);
+}
+
+.searchBar::placeholder {
+  color: var(--text-primary);
+  opacity: 0.8;
+}
+
+.searchBar:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-dark);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  text-shadow: 
+    0 0 5px var(--accent),
+    0 0 10px var(--accent),
+    0 0 15px var(--accent);
+}
+
+@media (max-width: 1400px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .searchBar {
+    font-size: 8px;
+    padding: 10px 16px;
+  }
+}
+

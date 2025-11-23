@@ -1,0 +1,134 @@
+.cursor {
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 99999;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.cursorInner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  box-shadow: 
+    0 0 4px var(--accent),
+    0 0 8px var(--accent),
+    0 0 12px var(--accent);
+  border: 1px solid var(--text-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.cursorOuter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+  box-shadow: 
+    0 0 6px var(--accent),
+    0 0 12px var(--accent),
+    inset 0 0 6px var(--accent);
+  animation: rotate 3s linear infinite;
+}
+
+.cursorGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 10px var(--accent),
+    0 0 20px var(--accent),
+    0 0 30px var(--accent),
+    inset 0 0 10px var(--accent);
+  animation: glowPulse 1s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.cursor.hover .cursorOuter {
+  width: 20px;
+  height: 20px;
+  border-color: var(--accent-hover);
+  box-shadow: 
+    0 0 8px var(--accent-hover),
+    0 0 16px var(--accent-hover),
+    inset 0 0 8px var(--accent-hover);
+}
+
+.cursor.hover .cursorInner {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-hover);
+  box-shadow: 
+    0 0 6px var(--accent-hover),
+    0 0 12px var(--accent-hover),
+    0 0 18px var(--accent-hover);
+}
+
+.cursor.clicking .cursorOuter {
+  width: 12px;
+  height: 12px;
+  border-color: var(--text-primary);
+  box-shadow: 
+    0 0 4px var(--text-primary),
+    0 0 8px var(--text-primary);
+}
+
+.cursor.clicking .cursorInner {
+  width: 3px;
+  height: 3px;
+  background: var(--text-primary);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+/* Hide cursor on mobile */
+@media (max-width: 768px) {
+  .cursor {
+    display: none;
+  }
+}
+
