@@ -41,7 +41,7 @@ export function AnimatedGridPattern({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [squares, setSquares] = useState<Array<{ id: number; pos: [number, number] }>>([])
 
-  function getPos() {
+  function getPos(): [number, number] {
     if (dimensions.width === 0 || dimensions.height === 0) {
       return [0, 0]
     }

@@ -51,7 +51,7 @@ export default function CustomCursor() {
         target.closest('[class*="card"]') ||
         target.closest('[class*="button"]')
       
-      setIsHovering(isInteractive)
+      setIsHovering(!!isInteractive)
     }
 
     const handleMouseDown = () => setIsClicking(true)
